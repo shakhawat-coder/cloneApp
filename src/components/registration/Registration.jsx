@@ -1,21 +1,26 @@
 import React, { useState } from "react";
 import { ToastContainer, toast, Bounce } from "react-toastify";
+import { Link, useNavigate } from "react-router-dom";
 import {
   getAuth,
   createUserWithEmailAndPassword,
   sendEmailVerification,
+  updateProfile,
+  onAuthStateChanged,
 } from "firebase/auth";
+import { getDatabase, ref, set, push } from "firebase/database";
 import RegistrationImage from "../../assets/registrationImage.png";
 import { FaRegEye } from "react-icons/fa";
 import { FaRegEyeSlash } from "react-icons/fa";
 import Input from "../common/Input";
 const Registration = () => {
   const auth = getAuth();
+  const db = getDatabase();
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
   const [eye, setEye] = useState(false);
-
+  const navigate = useNavigate();
   // ================error state================
   const [emailError, setEmailError] = useState("");
   const [fullNameError, setfullNameError] = useState("");
@@ -72,8 +77,9 @@ const Registration = () => {
 
       createUserWithEmailAndPassword(auth, email, password)
         .then((userCredential) => {
+          console.log(userCredential);
           sendEmailVerification(auth.currentUser).then(() => {
-            toast("Pleade check your email", {
+            toast("Please check your email", {
               position: "top-right",
               autoClose: 5000,
               hideProgressBar: false,
@@ -84,8 +90,27 @@ const Registration = () => {
               theme: "light",
               transition: Bounce,
             });
+            updateProfile(auth.currentUser, {
+              displayName: fullName,
+            }).then(() => {
+              const refData = ref(db, "users/");
+              set(push(refData), {
+                username: auth.currentUser.displayName,
+                email: auth.currentUser.email,
+              })
+                .then(() => {
+                  console.log("data upload done");
+                })
+                .catch((error) => {
+                  console.log("error from updated profiles");
+                });
+            });
+            setTimeout(() => {
+              navigate("/login");
+            }, 3000);
           });
         })
+
         .catch((error) => {
           if (error.message.includes("email")) {
             toast.error("This email is already register", {
@@ -216,7 +241,7 @@ const Registration = () => {
             <p className="font-opensans font-normal text-sm text-primary-text text-center mt-9">
               Already have an account ?
               <span className="font-bold text-orange cursor-pointer ">
-                Sign In
+                <Link to={"/login"}>Sign In</Link>
               </span>
             </p>
           </div>
